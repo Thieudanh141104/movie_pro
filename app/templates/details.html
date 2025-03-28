@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Chi tiết phim - Galaxy Cinema{% endblock %}
+{% block content %}
+{% load static %}
+    <link rel="stylesheet" href="{% static '/assets/details.css' %}">
+ <!-- GOOGLE FONTS -->
+ <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;600;700;900&display=swap" rel="stylesheet">
+     <section class="movie-banner">
+          <div class="hero-wrapper">
+               <div class="movie-banner-item">
+                    <img class="cover" src="" alt="">
+               </div>
+
+               <div class="movie-card" style="top:20px; margin: 20px">
+                    <img class="ava" style="width: 300px" src="" alt="raya">
+
+                    <div class="movie-card-content">
+                         <h2 class = "movie_name">Raya and the last Dragon</h2>
+                         <ul class="movie-card-btns">
+                              <li class="movie-card-btn">
+                                   family
+                              </li>
+                         </ul>
+                         <p class="movie-card-description"></p>
+
+                         <p class="duration"></p>
+                        <a href="#small-dialog1" class="popup-with-zoom-anim play-view1">
+                            <span class="video-play-icon">
+                                <span class="fa fa-play" aria-hidden="true"></span>
+                            </span>
+                            Xem Trailer
+                        </a>
+                        <div class="btn-container">
+                            <a href="/booking?movie_id={{ movie.id }}" class="btn-book">
+                                <i class="fa fa-ticket"></i> Đặt vé ngay
+                            </a>
+                        </div>
+
+                        <div id="small-dialog1" class="zoom-anim-dialog mfp-hide" style="max-width: 80vw">
+                            <iframe class="show_trailer" src=""  allow="autoplay; fullscreen" style="width: 80vw; height: 80vh"></iframe>
+                        </div>
+                    </div>
+               </div>
+
+          </div>
+     </section>
+
+    <script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const movieId = urlParams.get('movie_id');
+
+  function details() {
+    $.ajax({
+        url: `/api/movies/${movieId}`,
+        method: 'GET',
+        success: function (movie) {
+            document.querySelector('.movie-card-description').innerText = movie.description;
+            document.querySelector('.duration').innerText = movie.duration + "p";
+            document.querySelector('.movie_name').innerText = movie.title;
+            document.querySelector('.cover').src = movie.image_cover;
+            document.querySelector('.ava').src = movie.image_ava;
+            document.querySelector('.show_trailer').src = movie.trailer;
+        },
+        error: function (error) {
+            console.error('Error', error);
+        }
+    });
+}
+$(document).ready(function () {
+    details()
+});
+$('.popup-with-zoom-anim').magnificPopup({
+    type: 'inline',
+
+    fixedContentPos: false,
+    fixedBgPos: true,
+
+    overflowY: 'auto',
+
+    closeBtnInside: true,
+    preloader: false,
+
+    midClick: true,
+    removalDelay: 300,
+    mainClass: 'my-mfp-zoom-in'
+});
+  </script>
+{% endblock %}

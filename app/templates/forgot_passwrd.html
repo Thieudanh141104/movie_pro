@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quên Mật Khẩu</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+    .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        width: 400px;
+    }
+    .container h2 {
+        color: #1a2b5d;
+        font-size: 22px;
+        margin-bottom: 20px;
+    }
+    .input-field {
+        width: 90%;
+        padding: 12px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    .btn {
+        background: #1a2b5d;
+        color: white;
+        padding: 12px;
+        width: 80%;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    .btn:hover {
+        background: #13224e;
+    }
+    .icon-lock {
+        font-size: 40px;
+        color: #fbbc05;
+        margin-bottom: 10px;
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon-lock">&#128274;</div>
+        <h2>Quên Mật Khẩu</h2>
+        <p>Nhập email của bạn để nhận mã xác nhận đặt lại mật khẩu.</p>
+        <form id="forgotPasswordForm" method="post" action="{% url 'forgot_password' %}">
+            {% csrf_token %}
+            <input type="email" name="email" class="input-field" placeholder="Nhập email của bạn" required>
+            <button type="submit" class="btn">Gửi mã xác nhận</button>
+        </form>
+    </div>
+</body>
+</html>

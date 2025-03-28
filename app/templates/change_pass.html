@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% block title %} Đổi mật khẩu - Galaxy Cinema{% endblock %}
+{% block content %}
+
+<style>
+    .password-container {
+        background: #ffffff;
+        width: 450px;
+        max-width: 90%;
+        margin: 120px auto 80px;
+        padding: 40px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        position: relative;
+        z-index: 1;
+        transition: all 0.3s ease;
+    }
+
+    .password-container:hover {
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px);
+    }
+
+    .password-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .password-header h1 {
+        color: #0d253f;
+        font-size: 28px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+    }
+
+    .password-header p {
+        color: #666;
+        font-size: 16px;
+        margin-bottom: 0;
+    }
+
+    .password-header .lock-icon {
+        font-size: 50px;
+        color: #e4d804;
+        margin-bottom: 20px;
+        text-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+        position: relative;
+        margin-bottom: 25px;
+    }
+
+    .form-group label {
+        display: block;
+        text-align: left;
+        color: #555;
+        margin-bottom: 8px;
+        font-weight: 500;
+        font-size: 15px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 15px 20px;
+        padding-right: 45px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: all 0.3s;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        border-color: #0d253f;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(13, 37, 63, 0.1);
+    }
+
+    .form-group i.prefix-icon {
+        position: absolute;
+        left: 15px;
+        top: 47px;
+        color: #777;
+        font-size: 16px;
+    }
+
+    .form-group .toggle-password {
+        position: absolute;
+        right: 15px;
+        top: 47px;
+        cursor: pointer;
+        color: #777;
+        font-size: 16px;
+        z-index: 2;
+    }
+
+    .form-group .toggle-password:hover {
+        color: #0d253f;
+    }
+
+    .submit-btn {
+        background: linear-gradient(to right, #0d253f, #1c3f60);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 15px 25px;
+        width: 100%;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: all 0.3s;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .submit-btn:hover {
+        background: linear-gradient(to right, #0a1e32, #15324d);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .submit-btn i {
+        margin-right: 10px;
+    }
+
+    .error-message {
+        background-color: #ffe5e5;
+        color: #d63031;
+        padding: 12px 15px;
+        margin-top: 25px;
+        border-radius: 8px;
+        font-size: 14px;
+        border-left: 4px solid #d63031;
+        display: flex;
+        align-items: center;
+    }
+
+    .error-message i {
+        margin-right: 10px;
+        font-size: 18px;
+    }
+
+    .success-message {
+    background-color: #e6f9e6; /* Màu nền xanh lá nhạt */
+    color: #2d8f2d; /* Màu chữ xanh lá đậm */
+    padding: 12px 15px;
+    margin-top: 25px;
+    border-radius: 8px;
+    font-size: 14px;
+    border-left: 4px solid #2d8f2d;
+    display: flex;
+    align-items: center;
+    }
+
+    .success-message i {
+        margin-right: 10px;
+        font-size: 18px;
+    }
+
+    /* Thiết kế đáp ứng */
+    @media (max-width: 500px) {
+        .password-container {
+            padding: 30px 20px;
+            margin-top: 80px;
+        }
+
+        .password-header h1 {
+            font-size: 24px;
+        }
+
+        .form-control {
+            padding: 12px 15px;
+            font-size: 14px;
+        }
+    }
+
+    /* Hỗ trợ Dark Mode */
+    body.dark-mode .password-container {
+        background-color: #1e1e1e;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    body.dark-mode .password-header h1 {
+        color: #e4e4e4;
+    }
+
+    body.dark-mode .password-header p,
+    body.dark-mode .form-group label {
+        color: #b0b0b0;
+    }
+
+    body.dark-mode .form-control {
+        background-color: #2c2c2c;
+        border-color: #444;
+        color: #e4e4e4;
+    }
+
+    body.dark-mode .form-control:focus {
+        box-shadow: 0 0 0 3px rgba(228, 216, 4, 0.2);
+    }
+
+    body.dark-mode .password-rules {
+        background-color: #2c2c2c;
+    }
+
+    body.dark-mode .password-rules h4 {
+        color: #e4e4e4;
+    }
+
+    body.dark-mode .password-rules li {
+        color: #b0b0b0;
+    }
+
+    body.dark-mode .error-message {
+        background-color: rgba(214, 48, 49, 0.2);
+    }
+</style>
+
+<div class="password-container">
+    <div class="password-header">
+        <i class="fas fa-lock lock-icon"></i>
+        <h1>ĐỔI MẬT KHẨU</h1>
+        <p>Cập nhật mật khẩu mới để bảo vệ tài khoản của bạn</p>
+    </div>
+
+    <form action="{% url 'changepass' %}" method="POST" role="form">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="old_password">Mật khẩu hiện tại</label>
+            <input id="old_password" type="password" name="old_password" class="form-control" placeholder="Nhập mật khẩu hiện tại" required>
+            <i class="fas fa-key toggle-password" onclick="togglePassword('old_password')"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="new_password">Mật khẩu mới</label>
+            <input id="new_password" type="password" name="new_password" class="form-control" placeholder="Nhập mật khẩu mới" required>
+            <i class="fas fa-eye toggle-password" onclick="togglePassword('new_password')"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="confirm_password">Xác nhận mật khẩu mới</label>
+            <input id="confirm_password" type="password" name="confirm_password" class="form-control" placeholder="Nhập lại mật khẩu mới" required>
+            <i class="fas fa-eye toggle-password" onclick="togglePassword('confirm_password')"></i>
+        </div>
+
+        <button type="submit" class="submit-btn">
+            <i class="fas fa-save"></i> Đổi mật khẩu
+        </button>
+
+        {% if messages %}
+    {% for message in messages %}
+        {% if message.tags == "success" %}
+            <div class="success-message">
+                <i class="fas fa-check-circle"></i>
+                {{ message }}
+            </div>
+        {% else %}
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle"></i>
+                {{ message }}
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+    </form>
+</div>
+
+<script>
+    // Hàm để hiển thị/ẩn mật khẩu
+    function togglePassword(id) {
+        const field = document.getElementById(id);
+        const type = field.type === "password" ? "text" : "password";
+        field.type = type;
+
+        // Chuyển đổi biểu tượng
+        const icon = event.target;
+        if (type === "text") {
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+        } else {
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+        }
+    }
+</script>
+{% endblock %}

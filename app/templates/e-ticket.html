@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block title %}E-ticket - Galaxy Cinema{% endblock %}
+{% block content %}
+    <div class="ticket-container">
+        <div class="ticket">
+            <div class="poster">
+                <img src="{{ movie.image_ava }}" alt="{{ movie.title }}">
+            </div>
+            <div class="movie-title">{{ movie.title }}</div>
+            <div class="separator"></div>
+            <div class="cinema-info">
+                <div class="cinema-name">{{ room.name }}</div>
+                <div class="showtime">Suất: {{ screening.screening_time|time:"H:i" }} - {{ screening.screening_date|date:"d/m/Y" }}</div>
+            </div>
+           <div class="qr-code">
+               {% if booking.generate_qr_code %}
+                    <img src="{{ booking.generate_qr_code }}" alt="QR Code">
+               {% endif %}
+           </div>
+
+            <div class="separator"></div>
+            <div class="ticket-details">
+                <div class="ticket-code">
+                    <div class="label">Mã vé</div>
+                    <div class="value">{{ booking.id }}</div>
+                </div>
+                <div class="seat">
+                    <div class="label">Ghế</div>
+                    <div class="value">
+                        {% for seat in seats %}
+                            {{ seat.seat_number }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="price">
+                    <div class="label">Giá</div>
+                    <div class="value"> {{ total_price }}0đ</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+        :root {
+            --theme-bg: #f5f5f5;
+            --theme-orange: #FF6B01;
+            --theme-text: #333;
+            --theme-light-text: #666;
+            --separator-color: #ddd;
+        }
+
+        .ticket-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 90px 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .ticket {
+            width: 420px;
+            height: auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .poster {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        .poster img {
+            width: 170px;
+            height: 240px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .movie-title {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+            color: var(--theme-text);
+        }
+
+        .movie-format {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .format {
+            font-size: 14px;
+            color: var(--theme-light-text);
+        }
+
+        .rating {
+            background-color: var(--theme-orange);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .separator {
+            border-top: 1px dashed var(--separator-color);
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .separator::before, .separator::after {
+            content: "";
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: var(--theme-bg);
+            border-radius: 50%;
+            top: -6px;
+        }
+
+        .separator::before {
+            left: -20px;
+        }
+
+        .separator::after {
+            right: -20px;
+        }
+
+        .cinema-info {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .cinema-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: var(--theme-text);
+        }
+
+        .showtime {
+            font-size: 14px;
+            color: var(--theme-light-text);
+        }
+
+        .qr-code {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
+        .qr-code img {
+            width: 120px;
+            height: 120px;
+        }
+
+        .ticket-details {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        .ticket-code, .seat, .price {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .label {
+            font-size: 12px;
+            color: var(--theme-light-text);
+            margin-bottom: 5px;
+        }
+
+        .value {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--theme-text);
+        }
+
+        .button-container {
+            margin-top: 20px;
+        }
+
+        .home-page-btn {
+            background-color: #284968;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .home-page-btn:hover {
+            background-color: #0D253F;
+        }
+    </style>
+{% endblock %}

@@ -34,6 +34,7 @@ from django.utils import timezone
 import pytz
 import uuid as uuid_lib
 from django.utils.timezone import localtime
+from django.core.mail import EmailMessage
 
 # Create your views here.
 class UserViewSet(viewsets.ModelViewSet):
@@ -510,12 +511,21 @@ def contact_view(request):
         if not name or not email:
             messages.error(request, 'Vui lòng nhập đầy đủ các trường bắt buộc.')
         else:
-            contact = Contact.objects.create(
-                name=name,
-                email=email,
-                message=message,
+            subject = f"Liên hệ mới từ khách hàng {name}"
+            body = f"Người gửi: {name}\nEmail: {email}\nNội dung:\n{message}"
+
+            # Tạo email với Reply-To
+            email_message = EmailMessage(
+                subject,
+                body,
+                'kiettran.012647@gmail.com',  # Email của bạn (dùng để gửi)
+                ['kiettran.012647@gmail.com'],  # Email nhận (cũng là của bạn)
+                reply_to=[email],  # Khi admin nhấn "Reply", email sẽ trả về người gửi
             )
-            messages.success(request, 'Thông tin đã được gửi thành công!')
+
+            email_message.send()
+
+            messages.success(request, 'Thông tin đã được gửi thành công! Xin hãy chờ mail phản hồi!')
             return render(request, 'contact.html')
 
     return render(request, 'contact.html')

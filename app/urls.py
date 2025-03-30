@@ -43,7 +43,9 @@ urlpatterns = [
     path('payment-failed/', views.index, name='payment_failed'),    # Tạm thời chuyển hướng về trang chủ
     
     # API endpoint kiểm tra và khóa ghế
-    path('api/seats/check_and_lock/', views.check_and_lock_seats, name='check_and_lock'),
+    path('api/check_and_lock_seats/', views.check_and_lock_seats, name='check_and_lock_seats'),
+
+    path('api/custom_payment_return/', views.custom_payment_return, name='custom_payment_return'),
 ]
 
 

@@ -803,7 +803,6 @@
                                 <input type="text" id="card-cvv" placeholder="123" required>
                               </div>
                             </div>
-                            <button id="card-payment-button" class="btn btn-block mt-3 card-button">Thanh toán bằng thẻ</button>
                           </div>
                         </div>
                       </div>
@@ -843,7 +842,6 @@
                             <i class="fa fa-lock payment-method-info-icon"></i>
                             <p class="payment-method-info-text">Thanh toán an toàn và nhanh chóng qua ví điện tử Momo.</p>
                           </div>
-                          <button id="momo-payment-button" class="btn btn-block mt-3 momo-button">Thanh toán qua Momo</button>
                         </div>
                       </div>
                     </div>
@@ -1276,7 +1274,7 @@
                     click: function () { // Click event
                         let seatId = this.settings.id;
                         console.log(`Ghế ${seatId} được click`);
-                        
+
                         // Kiểm tra xem seatId có trong seatPrices không
                         let seatPrice = 0;
                         if (window.seatPrices[seatId] !== undefined) {
@@ -1288,10 +1286,10 @@
                         } else {
                             console.error('Không tìm thấy giá cho ghế:', seatId);
                         }
-    
+
                         // Nếu giá ghế vẫn là 0, đặt giá mặc định
                         if (seatPrice === 0) {
-                            seatPrice = 50; // Giá mặc định 50.000đ
+                            seatPrice = 90; // Giá mặc định 90.000đ
                             console.log(`Đặt giá mặc định ${seatPrice}.000đ cho ghế ${seatId}`);
                         }
     
@@ -1621,7 +1619,18 @@
     function goToPaymentStep(selectedSeats, totalPrice) {
         // Ẩn bước chọn ghế và hiển thị bước thanh toán
         $('#seat-selection-step').hide();
-        $('#payment-step').show();
+        if ($('#payment_div').length === 0) {
+            console.error("LỖI: Không tìm thấy phần tử #payment_div trong DOM!");
+        } else {
+            console.log("Phần tử #payment_div đã tồn tại trong DOM.");
+        }
+
+        $('#payment_div').fadeIn(300, function() {
+            $('html, body').animate({
+                scrollTop: $('#payment_div').offset().top - 100
+            }, 500);
+        });
+
         
         // Cập nhật thông tin thanh toán
         $('#payment-selected-seats').text(selectedSeats.join(', '));
@@ -1634,10 +1643,15 @@
         // Hiển thị thông báo
         showMessage('Đã khóa ghế thành công. Vui lòng chọn phương thức thanh toán.', 'success');
         
-        // Cuộn đến phần thanh toán
-        $('html, body').animate({
-            scrollTop: $('#payment-step').offset().top - 100
-        }, 500);
+        // Kiểm tra nếu phần tử #payment_div tồn tại
+        let paymentStep = $('#payment_div');
+        if (paymentStep.length) {
+            $('html, body').animate({
+                scrollTop: paymentStep.offset().top - 100
+            }, 500);
+        } else {
+            console.error("Lỗi: Không tìm thấy phần tử #payment_div");
+        }
         
         // Ẩn loading
         hideLoading();
@@ -1846,13 +1860,13 @@
                 showMessage(errorMessage, 'danger');
                 
                 // Trong môi trường phát triển, mô phỏng thanh toán thành công
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    showMessage('Đang mô phỏng thanh toán Momo (Chế độ phát triển)...', 'warning');
-                    setTimeout(function() {
-                        // Lấy screeningId và roomId từ biến toàn cục
-                        handleSuccessfulMomoPayment(selectedSeats, totalPrice, window.screeningId, window.roomId);
-                    }, 2000);
-                }
+<!--                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {-->
+<!--                    showMessage('Đang mô phỏng thanh toán Momo (Chế độ phát triển)...', 'warning');-->
+<!--                    setTimeout(function() {-->
+<!--                        // Lấy screeningId và roomId từ biến toàn cục-->
+<!--                        handleSuccessfulMomoPayment(selectedSeats, totalPrice, window.screeningId, window.roomId);-->
+<!--                    }, 2000);-->
+<!--                }-->
             }
         });
     }
@@ -1888,7 +1902,7 @@
         
         // Kiểm tra và cập nhật trạng thái ghế
         $.ajax({
-            url: '/api/seats/check_and_lock/',
+            url: '/api/check_and_lock_seats/',
             method: 'POST',
             contentType: 'application/json',
             headers: {
@@ -1914,30 +1928,30 @@
                     showMessage('Lỗi: ' + lockedSeats.error, 'danger');
                     return;
                 }
-                
+
                 // Xử lý cấu trúc phản hồi mới
                 if (lockedSeats.success === false) {
                     hideLoading();
                     showMessage('Lỗi: ' + lockedSeats.message, 'danger');
                     return;
                 }
-                
+
                 // Debug thông tin
                 console.log("API check_and_lock trả về:", lockedSeats);
-                
+
                 // Xử lý cấu trúc phản hồi mới (success, seat_prices, total_price, ...)
                 let selectedSeatsWithPrices = [];
                 let totalPrice = 0;
-                
+
                 if (lockedSeats.success === true) {
                     // Lấy thông tin giá vé và tổng tiền
-                    const seatPrices = lockedSeats.seat_prices || {};
+                    const seatPrices = lockedSeats.seat_prices || [];
                     totalPrice = lockedSeats.total_price || 0;
-                    
+
                     // Lưu thông tin khóa
                     const lockId = lockedSeats.lock_id;
                     localStorage.setItem('seat_lock_id', lockId);
-                    
+
                     // Cập nhật giá vé cho mỗi ghế
                     selectedSeats.forEach(function(seatNumber) {
                         const seatPrice = seatPrices[seatNumber] || 0;
@@ -1946,17 +1960,63 @@
                             price: seatPrice
                         });
                     });
-                    
+
                     // Hiển thị thông tin giá vé và tổng tiền
                     updatePriceDisplay(selectedSeatsWithPrices, totalPrice);
-                    
+
                     // Chuyển đến bước thanh toán
-                    goToPaymentStep(selectedSeats, totalPrice);
+<!--                    goToPaymentStep(selectedSeats, totalPrice);-->
+
+                    // Lấy user_id từ sessionStorage hoặc localStorage
+                    let userId = currentUserId;
+
+                    // Encode danh sách ghế để truyền qua URL (tránh lỗi ký tự đặc biệt)
+                    let encodedSeats = encodeURIComponent(selectedSeats.join(","));
+                    if (!userId) {
+                        console.error("LỖI: Không tìm thấy user_id trong session.");
+                        return;
+                    }
+
+                    // Tạo order_id theo format yêu cầu
+                    let timestamp = Math.floor(Date.now() / 1000);
+                    let uniqueId = Math.random().toString(36).substring(2, 10).toUpperCase();
+                    let orderId = `MOVIE_${userId}_${timestamp}_${uniqueId}`;
+
+                    const paymentData = {
+                        order_id: orderId,
+                        user_id: userId,
+                        screening_id: screeningId,
+                        room_id: roomId,
+                        seats: selectedSeats,
+                        amount: totalPrice
+                    };
+
+                    // Gửi thông tin qua API thanh toán
+                    fetch(`/api/custom_payment_return/?resultCode=0&orderId=${orderId}&message=Successful`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCookie('csrftoken'),
+                        },
+                        body: JSON.stringify(paymentData),
+                    })
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url; // Chuyển hướng trình duyệt đến trang e-ticket
+                        } else {
+                            return response.json();
+                        }
+                    })
+                    .then(data => {
+                        console.log("Response data:", data);
+                    })
+                    .catch(error => console.error("Error:", error));
                 } else {
                     // Nếu không lấy được dữ liệu, hiển thị lỗi
                     hideLoading();
                     showMessage('Không thể lấy thông tin ghế. Vui lòng thử lại.', 'danger');
                     console.error('Dữ liệu ghế không đúng định dạng:', lockedSeats);
+                    console.error('Lỗi: ',lockedSeats.error);
                     return;
                 }
             },
@@ -2034,7 +2094,12 @@
         // Mô phỏng chuyển hướng đến PayPal
         setTimeout(() => {
             hideLoading();
-            showMessage('Chức năng PayPal đang được phát triển', 'warning');
+            showMessage('Thanh toán thành công!', 'success');
+
+            // Mô phỏng tạo đơn hàng và xử lý thanh toán thành công
+            setTimeout(() => {
+                handleSuccessfulMomoPayment(selectedSeats, totalPrice, screeningId, roomId);
+            }, 1500);
         }, 2000);
     }
     
@@ -2195,10 +2260,10 @@
         });
         
         // Xử lý nút thanh toán qua thẻ tín dụng
-        $('#card-payment-button').on('click', function(e) {
-            e.preventDefault();
-            showMessage("Chức năng thanh toán qua thẻ tín dụng đang được phát triển.", "info");
-        });
+<!--        $('#card-payment-button').on('click', function(e) {-->
+<!--            e.preventDefault();-->
+<!--            showMessage("Chức năng thanh toán qua thẻ tín dụng đang được phát triển.", "info");-->
+<!--        });-->
         
         // Kiểm tra xem người dùng vừa từ trang thanh toán quay lại không
         const paymentResult = getParameterByName('payment_result');

@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',  # Thêm dòng này
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -159,9 +160,19 @@ EMAIL_HOST_PASSWORD = 'qqqe wdwx yhpz wnif'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Momo Payment Configuration
-MOMO_PARTNER_CODE = "MOMO_TEST"
+MOMO_PARTNER_CODE = "MOMO"
 MOMO_ACCESS_KEY = "F8BBA842ECF85"
 MOMO_SECRET_KEY = "K951B6PE1waDMi640xX08PD3vg6EkVlz"
 MOMO_ENVIRONMENT = "test"  # "test" hoặc "production"
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
+JAZZMIN_SETTINGS = {
+    "site_title": "GALAXY CINEMA ADMIN",
+    "site_header": "GALAXY CINEMA ADMIN",
+    "site_brand": "GALAXY CINEMA",
+    "site_logo": "img/galaxy_cinema_logo.png",  # Đường dẫn tới logo trong static
+    "login_logo": "img/galaxy_cinema_logo.png",  # Logo trên trang đăng nhập
+    "login_logo_dark": "img/galaxy_cinema_logo.png",  # Logo chế độ tối
+}

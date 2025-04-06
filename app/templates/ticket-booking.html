@@ -756,7 +756,6 @@
             </div>
               <br>
               <input type="button" name="next-step" class="next-step goToPay" value="Đến thanh toán" />
-              <input type="button" name="previous-step" class="previous-step" value="Quay lại" />
             </fieldset>
             <fieldset>
               <!-- Payment Page -->
@@ -877,10 +876,7 @@
                     
                     <!-- Nút thanh toán -->
                     <div class="d-flex justify-content-between align-items-center mt-4">
-                      <button type="button" class="btn btn-secondary cancel-pay-btn previous-step" id="payment-back-btn" style="width: 48%; height: 50px; border-radius: 5px; font-size: 16px; background-color: #dc3545; color: white; margin: 0;">
-                        <i class="fa fa-arrow-left mr-2"></i> Quay lại
-                      </button>
-                      <button type="button" class="payment-button pay-btn" style="width: 48%; height: 50px; border-radius: 5px; font-size: 16px; margin: 0;">
+                      <button type="button" class="payment-button pay-btn" style="width: 100%; height: 50px; border-radius: 5px; font-size: 16px; margin: 0;">
                         Thanh toán <i class="fa fa-arrow-right ml-2"></i>
                       </button>
                     </div>
@@ -1107,10 +1103,7 @@
                 navigateToStep(1, 2);
             });
             
-            // Bước 2 -> Bước 1 (Chọn ghế -> Lịch chiếu)
-            $('fieldset:eq(1) .previous-step').on('click', function() {
-                navigateToStep(2, 1);
-            });
+            // Xóa xử lý sự kiện cho nút quay lại từ bước 2 -> 1
             
             // Bước 2 -> Bước 3 (Chọn ghế -> Thanh toán)
             $('.goToPay').on('click', function() {
@@ -1140,34 +1133,7 @@
                 navigateToStep(2, 3);
             });
             
-            // Bước 3 -> Bước 2 (Thanh toán -> Chọn ghế)
-            $('#payment-back-btn').on('click', function() {
-                console.log("Nút quay lại từ trang thanh toán được nhấn");
-                
-                // Chuyển đến bước chọn ghế
-                navigateToStep(3, 2);
-                
-                // Đảm bảo bước 2 hiển thị và có thời gian để render
-                setTimeout(function() {
-                    console.log("Đang tải lại sơ đồ ghế...");
-                    
-                    // Lấy dữ liệu từ hệ thống lưu trữ
-                    const data = bookingStateManager.getData();
-                    
-                    if (!data.screeningId || !data.roomId) {
-                        console.error("Không tìm thấy thông tin suất chiếu hoặc phòng chiếu");
-                        showMessage("Có lỗi xảy ra. Vui lòng tải lại trang.", "danger");
-                        return;
-                    }
-                    
-                    // Tải lại ghế
-                    loadSeats(data.screeningId, data.roomId);
-                    
-                    // Hiển thị bước 2 và focus vào bước 2
-                    $('form#form fieldset').eq(1).css('display', 'block');
-                    $('html, body').animate({ scrollTop: $('#step2').offset().top - 50 }, 500);
-                }, 100);
-            });
+            // Xóa xử lý sự kiện cho nút quay lại từ bước 3 -> 2
             
             // Nút thanh toán
             $('.pay-btn').on('click', function(e) {
@@ -1860,13 +1826,15 @@
                 showMessage(errorMessage, 'danger');
                 
                 // Trong môi trường phát triển, mô phỏng thanh toán thành công
-<!--                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {-->
-<!--                    showMessage('Đang mô phỏng thanh toán Momo (Chế độ phát triển)...', 'warning');-->
-<!--                    setTimeout(function() {-->
-<!--                        // Lấy screeningId và roomId từ biến toàn cục-->
-<!--                        handleSuccessfulMomoPayment(selectedSeats, totalPrice, window.screeningId, window.roomId);-->
-<!--                    }, 2000);-->
-<!--                }-->
+                /*
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    showMessage('Đang mô phỏng thanh toán Momo (Chế độ phát triển)...', 'warning');
+                    setTimeout(function() {
+                        // Lấy screeningId và roomId từ biến toàn cục
+                        handleSuccessfulMomoPayment(selectedSeats, totalPrice, window.screeningId, window.roomId);
+                    }, 2000);
+                }
+                */
             }
         });
     }
@@ -1965,7 +1933,7 @@
                     updatePriceDisplay(selectedSeatsWithPrices, totalPrice);
 
                     // Chuyển đến bước thanh toán
-<!--                    goToPaymentStep(selectedSeats, totalPrice);-->
+                    // goToPaymentStep(selectedSeats, totalPrice);
 
                     // Lấy user_id từ sessionStorage hoặc localStorage
                     let userId = currentUserId;
@@ -2260,10 +2228,12 @@
         });
         
         // Xử lý nút thanh toán qua thẻ tín dụng
-<!--        $('#card-payment-button').on('click', function(e) {-->
-<!--            e.preventDefault();-->
-<!--            showMessage("Chức năng thanh toán qua thẻ tín dụng đang được phát triển.", "info");-->
-<!--        });-->
+        /*
+        $('#card-payment-button').on('click', function(e) {
+            e.preventDefault();
+            showMessage("Chức năng thanh toán qua thẻ tín dụng đang được phát triển.", "info");
+        });
+        */
         
         // Kiểm tra xem người dùng vừa từ trang thanh toán quay lại không
         const paymentResult = getParameterByName('payment_result');

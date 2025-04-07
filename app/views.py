@@ -433,7 +433,7 @@ def profile_view(request):
 
 def schedule_view(request):
     # Lấy ngày hiện tại
-    today = datetime.today().date()
+    today = timezone.localtime(timezone.now()).date()
 
     # Tạo danh sách các ngày trong tuần (5 ngày) từ hôm nay
     date_list = [today + timedelta(days=i) for i in range(5)]

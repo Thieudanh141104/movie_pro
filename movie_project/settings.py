@@ -176,3 +176,6 @@ JAZZMIN_SETTINGS = {
     "login_logo": "img/galaxy_cinema_logo.png",  # Logo trên trang đăng nhập
     "login_logo_dark": "img/galaxy_cinema_logo.png",  # Logo chế độ tối
 }
+
+TIME_ZONE = 'Asia/Ho_Chi_Minh'
+USE_TZ = True

@@ -187,7 +187,7 @@
           <div class="movie-genre">{{ movie.genre }}</div>
           <div class="time-buttons">
             {% for time in movie.times %}
-              <button class="time-button" onclick="selectScreening('{{ movie.id }}', '{{ time }}')">{{ time }}</button>
+              <button class="time-button" data-movie-id="{{ movie.id }}" onclick="selectScreening(this.dataset.movieId, '{{ time }}')">{{ time }}</button>
             {% endfor %}
           </div>
         </div>
@@ -212,19 +212,19 @@
     for (let button of buttons) {
         const buttonDate = button.getAttribute('data-date');
         console.log("Button date:", buttonDate);
-        
+
         // Thêm event listener cho mỗi nút
         button.addEventListener('click', function() {
             loadMovies(buttonDate);
         });
-        
+
         if (buttonDate === selectedDate) {
             button.classList.add('active');  // Đánh dấu nút bấm được chọn
         } else {
             button.classList.remove('active'); // Đảm bảo các nút khác không được chọn
         }
     }
-    
+
     // Thêm xử lý sự kiện cho nút đóng thông báo
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('close-alert')) {
@@ -233,11 +233,9 @@
     });
 });
 
-// Hàm hiển thị/ẩn trạng thái loading
 function showLoading() {
-    // Kiểm tra nếu đã có overlay thì không tạo thêm
     if (document.querySelector('.loading-overlay')) return;
-    
+
     const loadingOverlay = document.createElement('div');
     loadingOverlay.className = 'loading-overlay';
     loadingOverlay.innerHTML = '<div class="spinner"></div>';
@@ -251,7 +249,6 @@ function hideLoading() {
     }
 }
 
-// Hàm hiển thị thông báo
 function showMessage(message, type = 'success') {
     const messageContainer = document.getElementById('message-container');
     const alert = document.createElement('div');
@@ -260,10 +257,9 @@ function showMessage(message, type = 'success') {
         ${message}
         <span class="close-alert" style="float: right; cursor: pointer; font-weight: bold;">&times;</span>
     `;
-    
+
     messageContainer.appendChild(alert);
-    
-    // Tự động xóa sau 5 giây
+
     setTimeout(() => {
         if (alert.parentElement) {
             alert.remove();
@@ -271,28 +267,25 @@ function showMessage(message, type = 'success') {
     }, 5000);
 }
 
-// Hàm để tải phim theo ngày được chọn
 function loadMovies(day) {
-    // Hiện loading trước khi chuyển trang
     showLoading();
     console.log("Đang tải lịch chiếu cho ngày:", day);
     window.location.href = `/schedule/?date=${day}`;
 }
 
-// Hàm chọn suất chiếu và chuyển đến trang đặt vé
 function selectScreening(movieId, time) {
+    // Debug log để kiểm tra movieId
+    console.log("Selected movieId:", movieId);
+
     const urlParams = new URLSearchParams(window.location.search);
     const selectedDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
-    
-    // Hiển thị thông báo
+
     showMessage(`Bạn đã chọn suất chiếu ${time} cho ngày ${selectedDate}`);
-    
-    // Chờ một chút để người dùng thấy thông báo, sau đó chuyển trang
+
     setTimeout(() => {
-        window.location.href = `/booking?movie_id=${movieId}&screening_time=${time}&screening_date=${selectedDate}`;
+        window.location.href = `/booking?movie_id=${movieId}`;
     }, 1000);
 }
   </script>
-
 
 {% endblock %}

@@ -369,7 +369,6 @@ def change_password(request):
         # Lấy user hiện tại từ session
         user = User.objects.get(id=request.session['current_user_id'])
 
-        # ✅ Chỉ kiểm tra bằng check_password(), bỏ điều kiện so sánh trực tiếp
         if not check_password(old_password, user.password):
             messages.error(request, "Mật khẩu cũ không đúng.")
             return redirect('changepass')
@@ -440,13 +439,12 @@ def schedule_view(request):
     date_list = [today + timedelta(days=i) for i in range(5)]
 
     # Lấy ngày chiếu được chọn từ URL (nếu có), mặc định là hôm nay
-    selected_date_str = request.GET.get('date', today.strftime('%Y-%m-%d'))  # Chuyển ngày hiện tại thành chuỗi
+    selected_date_str = request.GET.get('date', today.strftime('%Y-%m-%d'))
 
     try:
         # Chuyển chuỗi ngày thành đối tượng datetime.date
         selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
     except ValueError:
-        # Nếu không thể chuyển đổi, sử dụng ngày hiện tại
         selected_date = today
 
     # Lọc các screenings theo ngày được chọn
@@ -460,6 +458,7 @@ def schedule_view(request):
 
         if movie.id not in movies:
             movies[movie.id] = {
+                'id': movie.id,  # Lưu lại movie id
                 'title': movie.title,
                 'genre': movie.genre.genre_name,
                 'poster': movie.image_ava,
@@ -471,15 +470,12 @@ def schedule_view(request):
     # Chuyển đổi dữ liệu thành danh sách các bộ phim để gửi vào template
     movie_list = list(movies.values())
 
-    # Chuyển selected_date thành chuỗi để so sánh trong template
-    selected_date_str = selected_date.strftime('%Y-%m-%d')
-    
     # Debug
     print(f"Selected date: {selected_date}, Selected date string: {selected_date_str}")
     for d in date_list:
         print(f"Date in list: {d}, formatted: {d.strftime('%Y-%m-%d')}")
 
-    # Render lại template với dữ liệu cần thiết
+    # Render template với dữ liệu cần thiết
     return render(request, 'schedule.html', {
         'movies': movie_list,
         'dates': date_list,

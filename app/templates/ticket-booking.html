@@ -906,6 +906,10 @@
   </div>
 
 <script>
+    /********************************************
+     * 1. QUẢN LÝ DỮ LIỆU & TRẠNG THÁI
+     ********************************************/
+    
     // Cache dữ liệu màn hình chọn ghế
     const seatSelectionCache = {
         store: function(seats, total) {
@@ -923,8 +927,7 @@
         }
     };
     
-    // THÊM đoạn code sau để thay thế nhiều cơ chế lưu trữ khác nhau
-    // Đặt ở đầu phần script, ngay sau khai báo seatSelectionCache
+    // Quản lý trạng thái đặt vé
     const bookingStateManager = {
         // Dữ liệu hiện tại
         currentData: {
@@ -1000,466 +1003,12 @@
             localStorage.removeItem('momoRoomId');
         }
     };
-
-    // Hàm xử lý chuyển bước form wizard
-    function navigateToStep(currentStep, targetStep) {
-        console.log(`Đang chuyển từ bước ${currentStep} sang bước ${targetStep}`);
-        
-        // Ẩn tất cả các fieldset
-        $('form#form fieldset').hide();
-        
-        // Hiển thị fieldset mục tiêu
-        $('form#form fieldset').eq(targetStep - 1).show();
-        
-        // Cập nhật thanh tiến trình
-        $('#progressbar li').removeClass('active').addClass('not_active');
-        $(`#step${targetStep}`).removeClass('not_active').addClass('active');
-        
-        // Cuộn lên đầu trang
-        $('html, body').animate({
-            scrollTop: $('#progressbar').offset().top - 50
-        }, 500);
-        
-        console.log(`Đã chuyển sang bước ${targetStep}`);
-    }
     
-    window.onload = function () {
-        // Kiểm tra xem có thông tin đặt vé trong URL không
-        const movie_id = getParameterByName('movie_id');
-        const screening_date = getParameterByName('screening_date');
-        const screening_time = getParameterByName('screening_time');
-        
-        // THÊM: Đảm bảo các biến toàn cục được khởi tạo
-        window.screeningId = null;
-        window.roomId = null;
-        window.selectedDate = null;
-        
-        // Lấy dữ liệu từ bookingStateManager
-        const savedData = bookingStateManager.getData();
-        
-        if (savedData && savedData.timestamp) {
-            // Kiểm tra xem dữ liệu có quá cũ không (30 phút)
-            const currentTime = new Date().getTime();
-            const thirtyMinutes = 30 * 60 * 1000;
-            
-            if (currentTime - savedData.timestamp <= thirtyMinutes) {
-                // Dữ liệu còn mới, khôi phục trạng thái
-                load_date();
-                window.selectedDate = savedData.selectedDate;
-                window.screeningId = savedData.screeningId;
-                window.roomId = savedData.roomId;
-                
-                if (savedData.selectedDate) {
-                    // THÊM: Đảm bảo selectDate được gọi để cập nhật UI
-                    const dayMatch = Array.from(document.querySelectorAll('.carousel-cell')).find(
-                        cell => cell.getAttribute('onclick').includes(savedData.selectedDate)
-                    );
-                    if (dayMatch) {
-                        const dayId = dayMatch.id;
-                        // Chọn ngày hiện tại (sau khi load_date đã hiển thị các ngày)
-                        selectDate(savedData.selectedDate, dayId);
-                    } else {
-                        load_screeningTime(savedData.selectedDate);
-                    }
-                }
-            } else {
-                // Dữ liệu quá cũ, xóa và khởi tạo mới
-                bookingStateManager.clearAll();
-                load_date();
-                
-                const date = new Date();
-                const default_date = date.getFullYear() + '-' +
-                    String(date.getMonth() + 1).padStart(2, '0') + '-' +
-                    String(date.getDate()).padStart(2, '0');
-                    
-                const dateToLoad = screening_date || default_date;
-                load_screeningTime(dateToLoad);
-            }
-        } else {
-            // Không có dữ liệu đã lưu, khởi tạo mới
-            load_date();
-            
-            const date = new Date();
-            const default_date = date.getFullYear() + '-' +
-                String(date.getMonth() + 1).padStart(2, '0') + '-' +
-                String(date.getDate()).padStart(2, '0');
-                
-            const dateToLoad = screening_date || default_date;
-            window.selectedDate = dateToLoad;
-            load_screeningTime(dateToLoad);
-        }
-        
-        document.getElementById("screen-next-btn").disabled = true;
-        
-        // Đăng ký sự kiện beforeunload để lưu trạng thái
-        window.addEventListener('beforeunload', function() {
-            bookingStateManager.saveAll();
-        });
-        
-        // Thiết lập lại sự kiện cho nút next-step và previous-step
-        $(document).ready(function() {
-            // Bước 1 -> Bước 2 (Lịch chiếu -> Chọn ghế)
-            $('#screen-next-btn').on('click', function() {
-                navigateToStep(1, 2);
-            });
-            
-            // Xóa xử lý sự kiện cho nút quay lại từ bước 2 -> 1
-            
-            // Bước 2 -> Bước 3 (Chọn ghế -> Thanh toán)
-            $('.goToPay').on('click', function() {
-                // Kiểm tra xem đã chọn ghế chưa
-                if ($('#selected-seats li').length === 0) {
-                    showMessage('Bạn chưa chọn ghế nào. Vui lòng chọn ghế trước khi thanh toán.', 'warning');
-                    return;
-                }
-                
-                // Lưu trạng thái ghế đã chọn
-                const selectedSeats = [];
-                $('#selected-seats li').each(function() {
-                    selectedSeats.push({
-                        id: $(this).data('seatId'),
-                        price: $(this).data('price'),
-                        text: $(this).text()
-                    });
-                });
-                
-                const totalPrice = $('#total').text();
-                seatSelectionCache.store(selectedSeats, totalPrice);
-                
-                // Cập nhật thông tin đơn hàng ở bước thanh toán
-                updateOrderSummary();
-                
-                // Chuyển đến bước thanh toán
-                navigateToStep(2, 3);
-            });
-            
-            // Xóa xử lý sự kiện cho nút quay lại từ bước 3 -> 2
-            
-            // Nút thanh toán
-            $('.pay-btn').on('click', function(e) {
-                e.preventDefault();
-                
-                // Lấy thông tin ghế đã chọn từ cache
-                const { seats, total } = seatSelectionCache.restore();
-                
-                // Nếu không có ghế nào được chọn
-                if (!seats || seats.length === 0) {
-                    showMessage('Bạn chưa chọn ghế nào. Vui lòng chọn ghế trước khi thanh toán.', 'warning');
-                    navigateToStep(3, 2); // Quay lại bước chọn ghế
-                    return;
-                }
-                
-                const seatIds = seats.map(seat => seat.id);
-                let paymentMethod = $('input[name="payment_method"]:checked').val();
-                
-                // Hiển thị dialog xác nhận với thông tin phương thức thanh toán
-                let paymentMethodText = "thẻ tín dụng";
-                if (paymentMethod === "paypal") paymentMethodText = "PayPal";
-                if (paymentMethod === "momo") paymentMethodText = "Ví Momo";
-                
-                // Hiển thị dialog xác nhận
-                showConfirmationDialog(total, seats.length, paymentMethodText, function() {
-                    if (paymentMethod === "momo") {
-                        processMomoPayment(seatIds, Number(total));
-                    } else if (paymentMethod === "paypal") {
-                        handlePayPalPayment(seatIds, Number(total));
-                    } else {
-                        processCardPayment(seatIds, Number(total));
-                    }
-                });
-            });
-        });
-    };
+    /********************************************
+     * 2. CÔNG CỤ & TIỆN ÍCH
+     ********************************************/
     
-    // Thay thế hàm loadSeats để đảm bảo phần chọn ghế hoạt động đúng
-    function loadSeats(screeningId, roomId) {
-        console.log(`Đang tải thông tin ghế cho suất chiếu ${screeningId} và phòng ${roomId}`);
-        
-        showLoading('Đang tải thông tin ghế...');
-        
-        // Đảm bảo #seat-map đã được tạo
-        if ($('#seat-map').length === 0) {
-            console.error('Không tìm thấy phần tử #seat-map');
-            hideLoading();
-            return;
-        }
-        
-        $.ajax({
-            url: `/api/seats/?room=${roomId}&screening=${screeningId}`,
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            success: function(response) {
-                hideLoading();
-                console.log('Đã nhận dữ liệu ghế:', response);
-                
-                // Lưu giá ghế
-                window.seatPrices = {};
-                response.forEach(seat => {
-                    window.seatPrices[seat.seat_number] = seat.ticket_price;
-                });
-                
-                // Xóa và khởi tạo lại phần tử ghế nếu cần
-                $('#seat-map').empty();
-                $('#seat-map').html('<div class="front">Màn hình</div>');
-                
-                // Khởi tạo sơ đồ ghế
-                let $cart = $('#selected-seats'), //Sitting Area
-                    $counter = $('#counter'), //Votes
-                    $total = $('#total'); //Total money
-                
-                // Đảm bảo các phần tử được xóa sạch
-                $cart.empty();
-                $counter.text('0');
-                $total.text('0');
-                
-                // Khởi tạo sơ đồ ghế mới
-                window.sc = $('#seat-map').seatCharts({
-                    map: [ // Seating chart
-                        'aaaaaaa_aa',
-                        'aaaaaaa_aa',
-                        'aaaaaaa_aa',
-                        'aaaaaaa_aa',
-                        'aaaaaaa_aa'
-                    ],
-                    naming: {
-                        top: false,
-                        getLabel: function (character, row, column) {
-                            return column;
-                        }
-                    },
-                    legend: { // Definition legend
-                        node: $('#legend'),
-                        items: [
-                            ['a', 'available', 'Ghế trống'],
-                            ['a', 'unavailable', 'Ghế đã đặt'],
-                            ['a', 'selected', 'Ghế bạn chọn']
-                        ]
-                    },
-                    click: function () { // Click event
-                        let seatId = this.settings.id;
-                        console.log(`Ghế ${seatId} được click`);
-
-                        // Kiểm tra xem seatId có trong seatPrices không
-                        let seatPrice = 0;
-                        if (window.seatPrices[seatId] !== undefined) {
-                            seatPrice = Number(window.seatPrices[seatId]);
-                            if (isNaN(seatPrice)) {
-                                console.error('Giá ghế không hợp lệ:', window.seatPrices[seatId]);
-                                seatPrice = 0;
-                            }
-                        } else {
-                            console.error('Không tìm thấy giá cho ghế:', seatId);
-                        }
-
-                        // Nếu giá ghế vẫn là 0, đặt giá mặc định
-                        if (seatPrice === 0) {
-                            seatPrice = 90; // Giá mặc định 90.000đ
-                            console.log(`Đặt giá mặc định ${seatPrice}.000đ cho ghế ${seatId}`);
-                        }
-    
-                        if (this.status() == 'available') {
-                            // Add to cart
-                            $('<li style="width: 80%">' + seatId + ' - ' + seatPrice + '.000đ</li>')
-                                .attr('id', 'cart-item-' + seatId)
-                                .data('seatId', seatId)
-                                .data('price', seatPrice) // Lưu giá vào dữ liệu phần tử
-                                .appendTo($cart);
-    
-                            // Update counter and total
-                            $counter.text(window.sc.find('selected').length + 1); // Increment manually
-                            
-                            // Đảm bảo tổng tiền là số hợp lệ
-                            let currentTotal = Number($total.text()) || 0;
-                            let newTotal = currentTotal + seatPrice;
-                            $total.text(newTotal);
-    
-                            return 'selected';
-                        } else if (this.status() == 'selected') { // Checked
-                            // Remove from cart
-                            let $item = $('#cart-item-' + this.settings.id);
-                            let itemPrice = $item.data('price') || seatPrice; // Lấy giá từ dữ liệu phần tử hoặc sử dụng seatPrice
-                            $item.remove();
-    
-                            // Update counter and total
-                            $counter.text(window.sc.find('selected').length - 1); // Decrement manually
-                            
-                            // Đảm bảo tổng tiền là số hợp lệ và không âm
-                            let currentTotal = Number($total.text()) || 0;
-                            let newTotal = Math.max(0, currentTotal - itemPrice);
-                            $total.text(newTotal);
-    
-                            return 'available';
-                        } else if (this.status() == 'unavailable') { // Sold
-                            return 'unavailable';
-                        } else {
-                            return this.style();
-                        }
-                    }
-                });
-                
-                console.log('Đã khởi tạo sơ đồ ghế thành công');
-                
-                // Đánh dấu các ghế đã được đặt
-                response.forEach(seat => {
-                    if (seat.status === 'unavailable' && window.sc.get(seat.seat_number)) {
-                        window.sc.get(seat.seat_number).status('unavailable');
-                    }
-                });
-                
-                // Khôi phục ghế đã chọn
-                try {
-                    const { seats } = seatSelectionCache.restore();
-                    if (seats && seats.length > 0) {
-                        let totalPrice = 0;
-                        seats.forEach(seat => {
-                            if (window.sc.get(seat.id) && window.sc.get(seat.id).status() === 'available') {
-                                // Thêm vào giỏ hàng
-                                $('<li style="width: 80%">' + seat.id + ' - ' + seat.price + '.000đ</li>')
-                                    .attr('id', 'cart-item-' + seat.id)
-                                    .data('seatId', seat.id)
-                                    .data('price', seat.price)
-                                    .appendTo($cart);
-                                
-                                // Đánh dấu ghế là đã chọn
-                                window.sc.get(seat.id).status('selected');
-                                
-                                totalPrice += seat.price;
-                            }
-                        });
-                        
-                        // Cập nhật số ghế và tổng tiền
-                        $counter.text($('#selected-seats li').length);
-                        $total.text(totalPrice);
-                    }
-                } catch (e) {
-                    console.error('Lỗi khi khôi phục ghế đã chọn:', e);
-                    // Không quá quan trọng, cứ tiếp tục
-                }
-                
-                // Hiển thị thông tin phim, ngày chiếu, giờ chiếu, phòng
-                $.ajax({
-                    url: `/api/movies/${getParameterByName('movie_id')}`,
-                    method: 'GET',
-                    success: function(movie) {
-                       $('.movie-title').text(`${movie.title}`);
-                    }
-                });
-
-                // GET screening info
-                $.ajax({
-                    url: `/api/screenings/${screeningId}`,
-                    method: 'GET',
-                    success: function(screening) {
-                        $('.screening_date').text(`${screening.screening_date}`);
-                        $('.screening_time').text(`${screening.screening_time}`);
-                    }
-                });
-
-                // GET room info
-                $.ajax({
-                    url: `/api/rooms/${roomId}`,
-                    method: 'GET',
-                    success: function(room) {
-                        $('.room').text(`${room.name}`);
-                    }
-                });
-                
-            },
-            error: function(error) {
-                hideLoading();
-                console.error('Lỗi khi tải dữ liệu ghế:', error);
-                showMessage('Không thể tải thông tin ghế. Vui lòng thử lại.', 'danger');
-            }
-        });
-    }
-    
-    // Hàm cập nhật thông tin đơn hàng
-    function updateOrderSummary() {
-        // Lấy thông tin ghế đã chọn từ cache hoặc bookingStateManager
-        const bookingData = bookingStateManager.getData();
-        let seats, total;
-        
-        if (bookingData.selectedSeats && bookingData.selectedSeats.length > 0) {
-            seats = bookingData.selectedSeats;
-            total = bookingData.totalPrice;
-        } else {
-            // Fallback đến cache cũ
-            const cacheData = seatSelectionCache.restore();
-            seats = cacheData.seats;
-            total = cacheData.total;
-        }
-        
-        // Cập nhật thông tin số lượng vé
-        $('#order-tickets').text((seats ? seats.length : 0) + ' vé');
-        
-        // Cập nhật thông tin ghế
-        let seatsText = seats ? seats.map(seat => seat.id).join(', ') : 'Chưa chọn ghế';
-        $('#order-seats').text(seatsText);
-        
-        // Cập nhật tổng tiền
-        $('#order-total').text(total || 0);
-    }
-     
-    // Thiết lập sự kiện click bên ngoài các nút .screen-time
-    document.addEventListener("click", function(event) {
-        if (!event.target.classList.contains("screen-time")) {
-            document.getElementById("screen-next-btn").disabled = true;
-        }
-    });
-
-    let currentUserId = "{{ request.session.current_user_id }}";
-    let prevId = null;
-    const today = new Date();
-
-    // Hàm hiển thị các ngày
-    function load_date() {
-        $('.carousel-nav').empty(); // Xóa dữ liệu cũ để tránh trùng lặp
-        
-        for (let i = 0; i < 5; i++) {
-            const date = new Date();
-            date.setDate(today.getDate() + i);
-
-            const day = date.toLocaleDateString("vi-VN", { weekday: "long" });
-            const dayNumeric = date.getDate();
-            const screening_date = date.getFullYear() + '-' +
-            String(date.getMonth() + 1).padStart(2, '0') + '-' +
-            String(dayNumeric).padStart(2, '0'); // Định dạng YYYY-MM-DD
-
-            // Tạo phần tử HTML cho mỗi ngày
-            const dayHTML = `
-                <div class="carousel-cell" id="day-${i}" onclick="selectDate('${screening_date}', 'day-${i}')">
-                    <div class="date-numeric">${dayNumeric}</div>
-                    <div class="date-day">${i === 0 ? "Hôm nay" : day}</div>
-                </div>`;
-            $('.carousel-nav').append(dayHTML);
-        }
-        
-        // Mặc định chọn ngày hôm nay
-        document.getElementById('day-0').style.background = "#df0e62";
-        prevId = 'day-0';
-    }
-
-    function selectDate(screening_date, id) {
-        console.log(`Đang chọn ngày: ${screening_date}`);
-        
-        if (prevId) {
-            document.getElementById(prevId).style.background = "rgb(243, 235, 235)"; // Xóa màu nền của ngày trước
-        }
-        document.getElementById(id).style.background = "#df0e62"; // Đặt màu nền cho ngày được chọn
-        prevId = id;
-        
-        // Lưu ngày đã chọn để sử dụng sau này
-        window.selectedDate = screening_date;
-        
-        // Hiển thị đang tải
-        $('.time-btn').html('<p><i class="fa fa-spinner fa-spin"></i> Đang tải lịch chiếu...</p>');
-        
-        // Tải lịch chiếu
-        load_screeningTime(screening_date);
-    }
-
+    // Lấy tham số từ URL
     function getParameterByName(name) {
         const url = window.location.href;
         const nameRegex = name.replace(/[\[\]]/g, '\\$&');
@@ -1467,64 +1016,35 @@
         const results = regex.exec(url);
         return results ? decodeURIComponent(results[2].replace(/\+/g, ' ')) : null;
     }
-
-    function load_screeningTime(screening_date) {
-        const movie_id = getParameterByName('movie_id');
-        
-        console.log(`Đang tải lịch chiếu cho ngày ${screening_date}, phim ID: ${movie_id}`);
-
-        $.ajax({
-            url: `/api/screenings?movie=${movie_id}&screening_date=${screening_date}`,
-            method: 'GET',
-            success: function(screenings) {
-                console.log(`Đã nhận ${screenings.length} lịch chiếu`);
-                $('.time-btn').empty(); // Xóa hết dữ liệu cũ
-                
-                if (screenings.length > 0) {
-                    $.each(screenings, function (index, screening) {
-                        let screeningHTML = `
-                            <button class="screen-time" onclick="selectScreeningTime(${screening.id}, ${screening.room})">
-                                ${screening.screening_time}
-                            </button>`;
-                        $('.time-btn').append(screeningHTML);
-                    });
-                    
-                    // Nếu có dữ liệu đã lưu, thử chọn suất chiếu phù hợp
-                    if (window.screeningId) {
-                        const savedScreening = screenings.find(s => s.id === window.screeningId);
-                        if (savedScreening) {
-                            // Tự động chọn suất chiếu đã lưu
-                            $(`.screen-time:contains('${savedScreening.screening_time}')`).addClass('selected');
-                            document.getElementById("screen-next-btn").disabled = false;
-                        }
-                    }
-                } else {
-                    $('.time-btn').append('<p>Không tìm thấy lịch chiếu cho ngày này.</p>');
+    
+    // Hàm lấy CSRF token từ cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
-            },
-            error: function(error) {
-                console.error('Lỗi khi tải lịch chiếu:', error);
-                $('.time-btn').empty();
-                $('.time-btn').append('<p>Không thể tải lịch chiếu. Vui lòng thử lại.</p>');
             }
-        });
+        }
+        return cookieValue;
     }
-
-    function selectScreeningTime(screening_id, room_id) {
-        document.getElementById("screen-next-btn").disabled = false;
-        
-        // Lưu screeningId và roomId vào biến toàn cục để sử dụng sau này
-        window.screeningId = screening_id;
-        window.roomId = room_id;
-        
-        // Lưu thông tin vào hệ thống lưu trữ mới
-        bookingStateManager.saveScreeningInfo(screening_id, room_id, window.selectedDate);
-        
-        // Hiển thị thông báo thành công
-        showMessage('Đã chọn suất chiếu, bạn có thể tiếp tục đến bước chọn ghế', 'success');
-        
-        loadSeats(screening_id, room_id);
+    
+    // Định dạng tiền tệ
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('vi-VN', { 
+            style: 'currency', 
+            currency: 'VND',
+            maximumFractionDigits: 0
+        }).format(amount);
     }
+    
+    /********************************************
+     * 3. UI COMPONENTS & INTERACTIONS
+     ********************************************/
     
     // Hàm hiển thị/ẩn trạng thái loading
     function showLoading(message = 'Đang xử lý...') {
@@ -1553,87 +1073,6 @@
                 }
             }, 300);
         }
-    }
-
-    function updatePriceDisplay(selectedSeatsWithPrices, totalPrice) {
-        // Cập nhật thông tin giá vé trong UI
-        const seatPriceContainer = $('#seats-pricing');
-        seatPriceContainer.empty();
-        
-        selectedSeatsWithPrices.forEach(function(seat) {
-            const priceFormatted = formatCurrency(seat.price * 1000);
-            seatPriceContainer.append(`
-                <div class="seat-price-item">
-                    <div class="seat-number">${seat.seatNumber}</div>
-                    <div class="seat-price">${priceFormatted}</div>
-                </div>
-            `);
-        });
-        
-        // Cập nhật tổng tiền
-        const totalPriceFormatted = formatCurrency(totalPrice * 1000);
-        $('#total-payment-amount').text(totalPriceFormatted);
-        $('#momo-payment-amount').val(totalPrice * 1000);
-        
-        console.log("Đã cập nhật hiển thị giá vé:", {
-            seats: selectedSeatsWithPrices, 
-            totalPrice: totalPrice,
-            totalPriceFormatted: totalPriceFormatted
-        });
-    }
-
-    function goToPaymentStep(selectedSeats, totalPrice) {
-        // Ẩn bước chọn ghế và hiển thị bước thanh toán
-        $('#seat-selection-step').hide();
-        if ($('#payment_div').length === 0) {
-            console.error("LỖI: Không tìm thấy phần tử #payment_div trong DOM!");
-        } else {
-            console.log("Phần tử #payment_div đã tồn tại trong DOM.");
-        }
-
-        $('#payment_div').fadeIn(300, function() {
-            $('html, body').animate({
-                scrollTop: $('#payment_div').offset().top - 100
-            }, 500);
-        });
-
-        
-        // Cập nhật thông tin thanh toán
-        $('#payment-selected-seats').text(selectedSeats.join(', '));
-        $('#payment-total-price').text(formatCurrency(totalPrice * 1000));
-        
-        // Lưu dữ liệu để sử dụng khi thanh toán
-        window.selectedSeatsForPayment = selectedSeats;
-        window.totalPriceForPayment = totalPrice;
-        
-        // Hiển thị thông báo
-        showMessage('Đã khóa ghế thành công. Vui lòng chọn phương thức thanh toán.', 'success');
-        
-        // Kiểm tra nếu phần tử #payment_div tồn tại
-        let paymentStep = $('#payment_div');
-        if (paymentStep.length) {
-            $('html, body').animate({
-                scrollTop: paymentStep.offset().top - 100
-            }, 500);
-        } else {
-            console.error("Lỗi: Không tìm thấy phần tử #payment_div");
-        }
-        
-        // Ẩn loading
-        hideLoading();
-        
-        console.log("Đã chuyển đến bước thanh toán với:", {
-            selectedSeats: selectedSeats, 
-            totalPrice: totalPrice
-        });
-    }
-
-    function formatCurrency(amount) {
-        return new Intl.NumberFormat('vi-VN', { 
-            style: 'currency', 
-            currency: 'VND',
-            maximumFractionDigits: 0
-        }).format(amount);
     }
     
     // Hàm hiển thị thông báo
@@ -1722,13 +1161,492 @@
         });
     }
     
-    // Đặt sự kiện click cho nút đóng thông báo
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('close-alert')) {
-            e.target.parentElement.remove();
-        }
-    });
+    // Hàm xử lý chuyển bước form wizard
+    function navigateToStep(currentStep, targetStep) {
+        console.log(`Đang chuyển từ bước ${currentStep} sang bước ${targetStep}`);
+        
+        // Ẩn tất cả các fieldset
+        $('form#form fieldset').hide();
+        
+        // Hiển thị fieldset mục tiêu
+        $('form#form fieldset').eq(targetStep - 1).show();
+        
+        // Cập nhật thanh tiến trình
+        $('#progressbar li').removeClass('active').addClass('not_active');
+        $(`#step${targetStep}`).removeClass('not_active').addClass('active');
+        
+        // Cuộn lên đầu trang
+        $('html, body').animate({
+            scrollTop: $('#progressbar').offset().top - 50
+        }, 500);
+        
+        console.log(`Đã chuyển sang bước ${targetStep}`);
+    }
     
+    // Cập nhật hiển thị phương thức thanh toán
+    function updatePaymentMethodDisplay() {
+        // Lấy phương thức thanh toán đã chọn
+        const selectedMethod = $('input[name="payment_method"]:checked').val();
+        
+        // Cập nhật trạng thái active cho tất cả các phương thức
+        $('.payment-method').removeClass('active');
+        $('.payment-method-badge').hide();
+        
+        // Đánh dấu phương thức được chọn
+        $(`.payment-method.${selectedMethod}`).addClass('active');
+        $(`.payment-method.${selectedMethod} .payment-method-badge`).show();
+        
+        // Cập nhật nút thanh toán dựa trên phương thức được chọn
+        const payButton = $('.payment-button');
+        payButton.removeClass('momo-button paypal-button');
+        
+        if (selectedMethod === 'momo') {
+            payButton.addClass('momo-button');
+            payButton.text('Thanh toán qua Momo');
+        } else if (selectedMethod === 'paypal') {
+            payButton.addClass('paypal-button');
+            payButton.text('Thanh toán qua PayPal');
+        } else {
+            payButton.text('Thanh toán bằng thẻ');
+        }
+        
+        // Cập nhật thông tin đơn hàng
+        updateOrderSummary();
+    }
+    
+    // Hàm cập nhật thông tin đơn hàng
+    function updateOrderSummary() {
+        const ticketCount = $('#counter').text();
+        const totalPrice = $('#total').text();
+        let seatsText = '';
+        
+        $('#selected-seats li').each(function(index) {
+            const seatId = $(this).data('seatId');
+            if (index > 0) seatsText += ', ';
+            seatsText += seatId;
+        });
+        
+        $('#order-tickets').text(ticketCount + ' vé');
+        $('#order-seats').text(seatsText || 'Chưa chọn ghế');
+        $('#order-total').text(totalPrice);
+    }
+    
+    // Hàm cập nhật hiển thị giá vé
+    function updatePriceDisplay(selectedSeatsWithPrices, totalPrice) {
+        // Cập nhật thông tin giá vé trong UI
+        const seatPriceContainer = $('#seats-pricing');
+        seatPriceContainer.empty();
+        
+        selectedSeatsWithPrices.forEach(function(seat) {
+            const priceFormatted = formatCurrency(seat.price * 1000);
+            seatPriceContainer.append(`
+                <div class="seat-price-item">
+                    <div class="seat-number">${seat.seatNumber}</div>
+                    <div class="seat-price">${priceFormatted}</div>
+                </div>
+            `);
+        });
+        
+        // Cập nhật tổng tiền
+        const totalPriceFormatted = formatCurrency(totalPrice * 1000);
+        $('#total-payment-amount').text(totalPriceFormatted);
+        $('#momo-payment-amount').val(totalPrice * 1000);
+        
+        console.log("Đã cập nhật hiển thị giá vé:", {
+            seats: selectedSeatsWithPrices, 
+            totalPrice: totalPrice,
+            totalPriceFormatted: totalPriceFormatted
+        });
+    }
+    
+    // Chuyển đến bước thanh toán
+    function goToPaymentStep(selectedSeats, totalPrice) {
+        // Ẩn bước chọn ghế và hiển thị bước thanh toán
+        $('#seat-selection-step').hide();
+        if ($('#payment_div').length === 0) {
+            console.error("LỖI: Không tìm thấy phần tử #payment_div trong DOM!");
+        } else {
+            console.log("Phần tử #payment_div đã tồn tại trong DOM.");
+        }
+
+        $('#payment_div').fadeIn(300, function() {
+            $('html, body').animate({
+                scrollTop: $('#payment_div').offset().top - 100
+            }, 500);
+        });
+
+        
+        // Cập nhật thông tin thanh toán
+        $('#payment-selected-seats').text(selectedSeats.join(', '));
+        $('#payment-total-price').text(formatCurrency(totalPrice * 1000));
+        
+        // Lưu dữ liệu để sử dụng khi thanh toán
+        window.selectedSeatsForPayment = selectedSeats;
+        window.totalPriceForPayment = totalPrice;
+        
+        // Hiển thị thông báo
+        showMessage('Đã khóa ghế thành công. Vui lòng chọn phương thức thanh toán.', 'success');
+        
+        // Kiểm tra nếu phần tử #payment_div tồn tại
+        let paymentStep = $('#payment_div');
+        if (paymentStep.length) {
+            $('html, body').animate({
+                scrollTop: paymentStep.offset().top - 100
+            }, 500);
+        } else {
+            console.error("Lỗi: Không tìm thấy phần tử #payment_div");
+        }
+        
+        // Ẩn loading
+        hideLoading();
+        
+        console.log("Đã chuyển đến bước thanh toán với:", {
+            selectedSeats: selectedSeats, 
+            totalPrice: totalPrice
+        });
+    }
+    
+    // Kiểm tra kết nối với API
+    function checkAPIConnection() {
+        $.ajax({
+            url: '/api/screenings/',
+            method: 'GET',
+            timeout: 5000, // Timeout 5 giây
+            success: function() {
+                console.log("Kết nối API thành công");
+            },
+            error: function(error) {
+                if (error.status === 0) {
+                    showMessage("Cảnh báo: Không thể kết nối đến máy chủ. Một số chức năng có thể không hoạt động.", "warning");
+                }
+            }
+        });
+    }
+    
+    /********************************************
+     * 4. CHỌN NGÀY & GIỜ CHIẾU
+     ********************************************/
+    
+    // Hàm hiển thị các ngày
+    function load_date() {
+        $('.carousel-nav').empty(); // Xóa dữ liệu cũ để tránh trùng lặp
+        
+        const today = new Date();
+        for (let i = 0; i < 5; i++) {
+            const date = new Date();
+            date.setDate(today.getDate() + i);
+
+            const day = date.toLocaleDateString("vi-VN", { weekday: "long" });
+            const dayNumeric = date.getDate();
+            const screening_date = date.getFullYear() + '-' +
+            String(date.getMonth() + 1).padStart(2, '0') + '-' +
+            String(dayNumeric).padStart(2, '0'); // Định dạng YYYY-MM-DD
+
+            // Tạo phần tử HTML cho mỗi ngày
+            const dayHTML = `
+                <div class="carousel-cell" id="day-${i}" onclick="selectDate('${screening_date}', 'day-${i}')">
+                    <div class="date-numeric">${dayNumeric}</div>
+                    <div class="date-day">${i === 0 ? "Hôm nay" : day}</div>
+                </div>`;
+            $('.carousel-nav').append(dayHTML);
+        }
+        
+        // Mặc định chọn ngày hôm nay
+        document.getElementById('day-0').style.background = "#df0e62";
+        window.prevId = 'day-0';
+    }
+
+    function selectDate(screening_date, id) {
+        console.log(`Đang chọn ngày: ${screening_date}`);
+        
+        if (window.prevId) {
+            document.getElementById(window.prevId).style.background = "rgb(243, 235, 235)"; // Xóa màu nền của ngày trước
+        }
+        document.getElementById(id).style.background = "#df0e62"; // Đặt màu nền cho ngày được chọn
+        window.prevId = id;
+        
+        // Lưu ngày đã chọn để sử dụng sau này
+        window.selectedDate = screening_date;
+        
+        // Hiển thị đang tải
+        $('.time-btn').html('<p><i class="fa fa-spinner fa-spin"></i> Đang tải lịch chiếu...</p>');
+        
+        // Tải lịch chiếu
+        load_screeningTime(screening_date);
+    }
+
+    function load_screeningTime(screening_date) {
+        const movie_id = getParameterByName('movie_id'); // Lấy ID phim từ tham số URL
+        
+        console.log(`Đang tải lịch chiếu cho ngày ${screening_date}, phim ID: ${movie_id}`);
+
+        $.ajax({
+            url: `/api/screenings?movie=${movie_id}&screening_date=${screening_date}`,
+            method: 'GET',
+            success: function(screenings) {
+                console.log(`Đã nhận ${screenings.length} lịch chiếu`);
+                $('.time-btn').empty(); // Xóa hết dữ liệu cũ
+                
+                if (screenings.length > 0) {
+                    $.each(screenings, function (index, screening) {
+                        let screeningHTML = `
+                            <button class="screen-time" onclick="selectScreeningTime(${screening.id}, ${screening.room})">
+                                ${screening.screening_time}
+                            </button>`;
+                        $('.time-btn').append(screeningHTML);
+                    });
+                    
+                    // Nếu có dữ liệu đã lưu, thử chọn suất chiếu phù hợp
+                    if (window.screeningId) {
+                        const savedScreening = screenings.find(s => s.id === window.screeningId);
+                        if (savedScreening) {
+                            // Tự động chọn suất chiếu đã lưu
+                            $(`.screen-time:contains('${savedScreening.screening_time}')`).addClass('selected');
+                            document.getElementById("screen-next-btn").disabled = false;
+                        }
+                    }
+                } else {
+                    $('.time-btn').append('<p>Không tìm thấy lịch chiếu cho ngày này.</p>');
+                }
+            },
+            error: function(error) {
+                console.error('Lỗi khi tải lịch chiếu:', error);
+                $('.time-btn').empty();
+                $('.time-btn').append('<p>Không thể tải lịch chiếu. Vui lòng thử lại.</p>');
+            }
+        });
+    }
+
+    function selectScreeningTime(screening_id, room_id) {
+        document.getElementById("screen-next-btn").disabled = false;
+        
+        // Lưu screeningId và roomId vào biến toàn cục để sử dụng sau này
+        window.screeningId = screening_id;
+        window.roomId = room_id;
+        
+        // Lưu thông tin vào hệ thống lưu trữ mới
+        bookingStateManager.saveScreeningInfo(screening_id, room_id, window.selectedDate);
+        
+        // Hiển thị thông báo thành công
+        showMessage('Đã chọn suất chiếu, bạn có thể tiếp tục đến bước chọn ghế', 'success');
+        
+        loadSeats(screening_id, room_id);
+    }
+
+    // Tiếp tục phần code còn lại trong phần edit tiếp theo
+
+    /********************************************
+     * 5. QUẢN LÝ CHỌN GHẾ
+     ********************************************/
+
+    // Tải thông tin ghế ngồi 
+    function loadSeats(screeningId, roomId) {
+        console.log(`Đang tải thông tin ghế cho suất chiếu ${screeningId} và phòng ${roomId}`);
+        
+        showLoading('Đang tải thông tin ghế...');
+        
+        // Đảm bảo #seat-map đã được tạo
+        if ($('#seat-map').length === 0) {
+            console.error('Không tìm thấy phần tử #seat-map');
+            hideLoading();
+            return;
+        }
+        
+        $.ajax({
+            url: `/api/seats/?room=${roomId}&screening=${screeningId}`, // Gọi API để lấy dữ liệu ghế
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            success: function(response) {
+                hideLoading();
+                console.log('Đã nhận dữ liệu ghế:', response);
+                
+                // Lưu giá ghế
+                window.seatPrices = {};
+                response.forEach(seat => {
+                    window.seatPrices[seat.seat_number] = seat.ticket_price;
+                });
+                
+                // Xóa và khởi tạo lại phần tử ghế nếu cần
+                $('#seat-map').empty();
+                $('#seat-map').html('<div class="front">Màn hình</div>');
+                
+                // Khởi tạo sơ đồ ghế
+                let $cart = $('#selected-seats'), // danh sách ghế đã chọn
+                    $counter = $('#counter'), // số lượng ghế đã chọn
+                    $total = $('#total'); // total money
+                
+                // Đảm bảo các phần tử được xóa sạch
+                $cart.empty();
+                $counter.text('0');
+                $total.text('0');
+                
+                // Khởi tạo sơ đồ ghế mới
+                window.sc = $('#seat-map').seatCharts({
+                    map: [ // sơ đồ chỗ ngồi
+                        'aaaaaaa_aa',
+                        'aaaaaaa_aa',
+                        'aaaaaaa_aa',
+                        'aaaaaaa_aa',
+                        'aaaaaaa_aa'
+                    ],
+                    naming: {
+                        top: false,
+                        getLabel: function (character, row, column) {
+                            return column;
+                        }
+                    },
+                    legend: { // Definition legend
+                        node: $('#legend'),
+                        items: [
+                            ['a', 'available', 'Ghế trống'],
+                            ['a', 'unavailable', 'Ghế đã đặt'],
+                            ['a', 'selected', 'Ghế bạn chọn']
+                        ]
+                    },
+                    click: function () { // Click event
+                        let seatId = this.settings.id;
+                        console.log(`Ghế ${seatId} được click`);
+
+                        // Kiểm tra xem seatId có trong seatPrices không
+                        let seatPrice = 0;
+                        if (window.seatPrices[seatId] !== undefined) {
+                            seatPrice = Number(window.seatPrices[seatId]);
+                            if (isNaN(seatPrice)) {
+                                console.error('Giá ghế không hợp lệ:', window.seatPrices[seatId]);
+                                seatPrice = 0;
+                            }
+                        } else {
+                            console.error('Không tìm thấy giá cho ghế:', seatId);
+                        }
+
+                        // Nếu giá ghế vẫn là 0, đặt giá mặc định
+                        if (seatPrice === 0) {
+                            seatPrice = 90; // Giá mặc định 90.000đ
+                            console.log(`Đặt giá mặc định ${seatPrice}.000đ cho ghế ${seatId}`);
+                        }
+
+                        if (this.status() == 'available') {
+                            // Add to cart
+                            $('<li style="width: 80%">' + seatId + ' - ' + seatPrice + '.000đ</li>')
+                                .attr('id', 'cart-item-' + seatId)
+                                .data('seatId', seatId)
+                                .data('price', seatPrice) // Lưu giá vào dữ liệu phần tử
+                                .appendTo($cart);
+
+                            // Update counter and total
+                            $counter.text(window.sc.find('selected').length + 1); // Increment manually
+                            
+                            // Đảm bảo tổng tiền là số hợp lệ
+                            let currentTotal = Number($total.text()) || 0;
+                            let newTotal = currentTotal + seatPrice;
+                            $total.text(newTotal);
+
+                            return 'selected';
+                        } else if (this.status() == 'selected') { // Checked
+                            // Remove from cart
+                            let $item = $('#cart-item-' + this.settings.id);
+                            let itemPrice = $item.data('price') || seatPrice; // Lấy giá từ dữ liệu phần tử hoặc sử dụng seatPrice
+                            $item.remove();
+
+                            // Update counter and total
+                            $counter.text(window.sc.find('selected').length - 1); // Decrement manually
+                            
+                            // Đảm bảo tổng tiền là số hợp lệ và không âm
+                            let currentTotal = Number($total.text()) || 0;
+                            let newTotal = Math.max(0, currentTotal - itemPrice);
+                            $total.text(newTotal);
+
+                            return 'available';
+                        } else if (this.status() == 'unavailable') { // Sold
+                            return 'unavailable';
+                        } else {
+                            return this.style();
+                        }
+                    }
+                });
+                
+                console.log('Đã khởi tạo sơ đồ ghế thành công');
+                
+                // Đánh dấu các ghế đã được đặt
+                response.forEach(seat => {
+                    if (seat.status === 'unavailable' && window.sc.get(seat.seat_number)) {
+                        window.sc.get(seat.seat_number).status('unavailable');
+                    }
+                });
+                
+                // Khôi phục ghế đã chọn
+                try {
+                    const { seats } = seatSelectionCache.restore();
+                    if (seats && seats.length > 0) {
+                        let totalPrice = 0;
+                        seats.forEach(seat => {
+                            if (window.sc.get(seat.id) && window.sc.get(seat.id).status() === 'available') {
+                                // Thêm vào giỏ hàng
+                                $('<li style="width: 80%">' + seat.id + ' - ' + seat.price + '.000đ</li>')
+                                    .attr('id', 'cart-item-' + seat.id)
+                                    .data('seatId', seat.id)
+                                    .data('price', seat.price)
+                                    .appendTo($cart);
+                                
+                                // Đánh dấu ghế là đã chọn
+                                window.sc.get(seat.id).status('selected');
+                                
+                                totalPrice += seat.price;
+                            }
+                        });
+                        
+                        // Cập nhật số ghế và tổng tiền
+                        $counter.text($('#selected-seats li').length);
+                        $total.text(totalPrice);
+                    }
+                } catch (e) {
+                    console.error('Lỗi khi khôi phục ghế đã chọn:', e);
+                    // Không quá quan trọng, cứ tiếp tục
+                }
+                
+                // Hiển thị thông tin phim, ngày chiếu, giờ chiếu, phòng
+                $.ajax({
+                    url: `/api/movies/${getParameterByName('movie_id')}`,
+                    method: 'GET',
+                    success: function(movie) {
+                       $('.movie-title').text(`${movie.title}`);
+                    }
+                });
+
+                // GET screening info
+                $.ajax({
+                    url: `/api/screenings/${screeningId}`,
+                    method: 'GET',
+                    success: function(screening) {
+                        $('.screening_date').text(`${screening.screening_date}`);
+                        $('.screening_time').text(`${screening.screening_time}`);
+                    }
+                });
+
+                // GET room info
+                $.ajax({
+                    url: `/api/rooms/${roomId}`,
+                    method: 'GET',
+                    success: function(room) {
+                        $('.room').text(`${room.name}`);
+                    }
+                });
+                
+            },
+            error: function(error) {
+                hideLoading();
+                console.error('Lỗi khi tải dữ liệu ghế:', error);
+                showMessage('Không thể tải thông tin ghế. Vui lòng thử lại.', 'danger');
+            }
+        });
+    }
+
+    /********************************************
+     * 6. QUẢN LÝ THANH TOÁN
+     ********************************************/
+
     // Hàm xử lý thanh toán qua Momo
     function processMomoPayment(selectedSeats, totalPrice) {
         showLoading('Đang khởi tạo giao dịch thanh toán Momo...'); // Hiển thị trạng thái loading
@@ -1746,6 +1664,7 @@
         }
         
         // Kiểm tra user đã đăng nhập chưa
+        let currentUserId = "{{ request.session.current_user_id }}";
         if (!currentUserId) {
             hideLoading();
             showMessage('Bạn cần đăng nhập để thanh toán. Đang chuyển hướng...', 'warning');
@@ -1824,21 +1743,10 @@
                 }
                 
                 showMessage(errorMessage, 'danger');
-                
-                // Trong môi trường phát triển, mô phỏng thanh toán thành công
-                /*
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    showMessage('Đang mô phỏng thanh toán Momo (Chế độ phát triển)...', 'warning');
-                    setTimeout(function() {
-                        // Lấy screeningId và roomId từ biến toàn cục
-                        handleSuccessfulMomoPayment(selectedSeats, totalPrice, window.screeningId, window.roomId);
-                    }, 2000);
-                }
-                */
             }
         });
     }
-    
+
     // Xử lý sau khi thanh toán Momo thành công
     function handleSuccessfulMomoPayment(selectedSeats, totalPrice, screeningId, roomId) {
         showLoading();
@@ -1858,6 +1766,7 @@
         }
         
         // Kiểm tra user đã đăng nhập chưa
+        let currentUserId = "{{ request.session.current_user_id }}";
         if (!currentUserId) {
             hideLoading();
             showMessage('Bạn cần đăng nhập để hoàn tất đặt vé. Đang chuyển hướng...', 'warning');
@@ -1932,9 +1841,6 @@
                     // Hiển thị thông tin giá vé và tổng tiền
                     updatePriceDisplay(selectedSeatsWithPrices, totalPrice);
 
-                    // Chuyển đến bước thanh toán
-                    // goToPaymentStep(selectedSeats, totalPrice);
-
                     // Lấy user_id từ sessionStorage hoặc localStorage
                     let userId = currentUserId;
 
@@ -1996,81 +1902,6 @@
         });
     }
 
-    // Cập nhật hàm updatePaymentMethodDisplay cho thiết kế mới
-    function updatePaymentMethodDisplay() {
-        // Lấy phương thức thanh toán đã chọn
-        const selectedMethod = $('input[name="payment_method"]:checked').val();
-        
-        // Cập nhật trạng thái active cho tất cả các phương thức
-        $('.payment-method').removeClass('active');
-        $('.payment-method-badge').hide();
-        
-        // Đánh dấu phương thức được chọn
-        $(`.payment-method.${selectedMethod}`).addClass('active');
-        $(`.payment-method.${selectedMethod} .payment-method-badge`).show();
-        
-        // Cập nhật nút thanh toán dựa trên phương thức được chọn
-        const payButton = $('.payment-button');
-        payButton.removeClass('momo-button paypal-button');
-        
-        if (selectedMethod === 'momo') {
-            payButton.addClass('momo-button');
-            payButton.text('Thanh toán qua Momo');
-        } else if (selectedMethod === 'paypal') {
-            payButton.addClass('paypal-button');
-            payButton.text('Thanh toán qua PayPal');
-        } else {
-            payButton.text('Thanh toán bằng thẻ');
-        }
-        
-        // Cập nhật thông tin đơn hàng
-        updateOrderSummary();
-    }
-    
-    // Hàm cập nhật thông tin đơn hàng
-    function updateOrderSummary() {
-        const ticketCount = $('#counter').text();
-        const totalPrice = $('#total').text();
-        let seatsText = '';
-        
-        $('#selected-seats li').each(function(index) {
-            const seatId = $(this).data('seatId');
-            if (index > 0) seatsText += ', ';
-            seatsText += seatId;
-        });
-        
-        $('#order-tickets').text(ticketCount + ' vé');
-        $('#order-seats').text(seatsText || 'Chưa chọn ghế');
-        $('#order-total').text(totalPrice);
-    }
-    
-    // Thêm sự kiện cho PayPal button
-    function handlePayPalPayment(selectedSeats, totalPrice) {
-        // Lấy screeningId và roomId từ biến toàn cục
-        const screeningId = window.screeningId;
-        const roomId = window.roomId;
-        
-        // Kiểm tra xem có screeningId và roomId không
-        if (!screeningId || !roomId) {
-            showMessage('Không tìm thấy thông tin lịch chiếu. Vui lòng làm mới trang và thử lại.', 'danger');
-            return;
-        }
-        
-        showLoading();
-        showMessage('Đang chuyển hướng đến PayPal...', 'info');
-        
-        // Mô phỏng chuyển hướng đến PayPal
-        setTimeout(() => {
-            hideLoading();
-            showMessage('Thanh toán thành công!', 'success');
-
-            // Mô phỏng tạo đơn hàng và xử lý thanh toán thành công
-            setTimeout(() => {
-                handleSuccessfulMomoPayment(selectedSeats, totalPrice, screeningId, roomId);
-            }, 1500);
-        }, 2000);
-    }
-    
     // Hàm xử lý thanh toán thẻ
     function processCardPayment(selectedSeats, totalPrice) {
         // Lấy screeningId và roomId từ biến toàn cục
@@ -2110,23 +1941,215 @@
             }, 1500);
         }, 2000);
     }
-    
-    // Hàm lấy CSRF token từ cookie
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
+
+    // Thêm sự kiện cho PayPal button
+    function handlePayPalPayment(selectedSeats, totalPrice) {
+        // Lấy screeningId và roomId từ biến toàn cục
+        const screeningId = window.screeningId;
+        const roomId = window.roomId;
+        
+        // Kiểm tra xem có screeningId và roomId không
+        if (!screeningId || !roomId) {
+            showMessage('Không tìm thấy thông tin lịch chiếu. Vui lòng làm mới trang và thử lại.', 'danger');
+            return;
         }
-        return cookieValue;
+        
+        showLoading();
+        showMessage('Đang chuyển hướng đến PayPal...', 'info');
+        
+        // Mô phỏng chuyển hướng đến PayPal
+        setTimeout(() => {
+            hideLoading();
+            showMessage('Thanh toán thành công!', 'success');
+
+            // Mô phỏng tạo đơn hàng và xử lý thanh toán thành công
+            setTimeout(() => {
+                handleSuccessfulMomoPayment(selectedSeats, totalPrice, screeningId, roomId);
+            }, 1500);
+        }, 2000);
     }
-    
+
+    /********************************************
+     * 7. SỰ KIỆN TRÌNH DUYỆT & KHỞI TẠO
+     ********************************************/
+
+    // Xử lý khi trang được tải
+    window.onload = function () {
+        // Kiểm tra xem có thông tin đặt vé trong URL không
+        const movie_id = getParameterByName('movie_id');
+        const screening_date = getParameterByName('screening_date');
+        const screening_time = getParameterByName('screening_time');
+        
+        // THÊM: Đảm bảo các biến toàn cục được khởi tạo
+        window.screeningId = null;
+        window.roomId = null;
+        window.selectedDate = null;
+        window.prevId = null;
+        
+        // Lấy dữ liệu từ bookingStateManager
+        const savedData = bookingStateManager.getData();
+        
+        if (savedData && savedData.timestamp) {
+            // Kiểm tra xem dữ liệu có quá cũ không (30 phút)
+            const currentTime = new Date().getTime();
+            const thirtyMinutes = 30 * 60 * 1000;
+            
+            if (currentTime - savedData.timestamp <= thirtyMinutes) {
+                // Dữ liệu còn mới, khôi phục trạng thái
+                load_date();
+                window.selectedDate = savedData.selectedDate;
+                window.screeningId = savedData.screeningId;
+                window.roomId = savedData.roomId;
+                
+                if (savedData.selectedDate) {
+                    // THÊM: Đảm bảo selectDate được gọi để cập nhật UI
+                    const dayMatch = Array.from(document.querySelectorAll('.carousel-cell')).find(
+                        cell => cell.getAttribute('onclick').includes(savedData.selectedDate)
+                    );
+                    if (dayMatch) {
+                        const dayId = dayMatch.id;
+                        // Chọn ngày hiện tại (sau khi load_date đã hiển thị các ngày)
+                        selectDate(savedData.selectedDate, dayId);
+                    } else {
+                        load_screeningTime(savedData.selectedDate);
+                    }
+                }
+            } else {
+                // Dữ liệu quá cũ, xóa và khởi tạo mới
+                bookingStateManager.clearAll();
+                load_date();
+                
+                const date = new Date();
+                const default_date = date.getFullYear() + '-' +
+                    String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(date.getDate()).padStart(2, '0');
+                    
+                const dateToLoad = screening_date || default_date;
+                load_screeningTime(dateToLoad);
+            }
+        } else {
+            // Không có dữ liệu đã lưu, khởi tạo mới
+            load_date();
+            
+            const date = new Date();
+            const default_date = date.getFullYear() + '-' +
+                String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                String(date.getDate()).padStart(2, '0');
+                
+            const dateToLoad = screening_date || default_date;
+            window.selectedDate = dateToLoad;
+            load_screeningTime(dateToLoad);
+        }
+        
+        document.getElementById("screen-next-btn").disabled = true;
+        
+        // Đăng ký sự kiện beforeunload để lưu trạng thái
+        window.addEventListener('beforeunload', function() {
+            bookingStateManager.saveAll();
+        });
+        
+        // Thiết lập lại sự kiện cho nút next-step và previous-step
+        $(document).ready(function() {
+            // Bước 1 -> Bước 2 (Lịch chiếu -> Chọn ghế)
+            $('#screen-next-btn').on('click', function() {
+                navigateToStep(1, 2);
+            });
+            
+            // Bước 2 -> Bước 3 (Chọn ghế -> Thanh toán)
+            $('.goToPay').on('click', function() {
+                // Kiểm tra xem đã chọn ghế chưa
+                if ($('#selected-seats li').length === 0) {
+                    showMessage('Bạn chưa chọn ghế nào. Vui lòng chọn ghế trước khi thanh toán.', 'warning');
+                    return;
+                }
+                
+                // Lưu trạng thái ghế đã chọn
+                const selectedSeats = [];
+                $('#selected-seats li').each(function() {
+                    selectedSeats.push({
+                        id: $(this).data('seatId'),
+                        price: $(this).data('price'),
+                        text: $(this).text()
+                    });
+                });
+                
+                const totalPrice = $('#total').text();
+                seatSelectionCache.store(selectedSeats, totalPrice);
+                
+                // Cập nhật thông tin đơn hàng ở bước thanh toán
+                updateOrderSummary();
+                
+                // Chuyển đến bước thanh toán
+                navigateToStep(2, 3);
+            });
+            
+            // Nút thanh toán
+            $('.pay-btn').on('click', function(e) {
+                e.preventDefault();
+                
+                // Lấy thông tin ghế đã chọn từ cache
+                const { seats, total } = seatSelectionCache.restore();
+                
+                // Nếu không có ghế nào được chọn
+                if (!seats || seats.length === 0) {
+                    showMessage('Bạn chưa chọn ghế nào. Vui lòng chọn ghế trước khi thanh toán.', 'warning');
+                    navigateToStep(3, 2); // Quay lại bước chọn ghế
+                    return;
+                }
+                
+                const seatIds = seats.map(seat => seat.id);
+                let paymentMethod = $('input[name="payment_method"]:checked').val();
+                
+                // Hiển thị dialog xác nhận với thông tin phương thức thanh toán
+                let paymentMethodText = "thẻ tín dụng";
+                if (paymentMethod === "paypal") paymentMethodText = "PayPal";
+                if (paymentMethod === "momo") paymentMethodText = "Ví Momo";
+                
+                // Hiển thị dialog xác nhận
+                showConfirmationDialog(total, seats.length, paymentMethodText, function() {
+                    if (paymentMethod === "momo") {
+                        processMomoPayment(seatIds, Number(total));
+                    } else if (paymentMethod === "paypal") {
+                        handlePayPalPayment(seatIds, Number(total));
+                    } else {
+                        processCardPayment(seatIds, Number(total));
+                    }
+                });
+            });
+        });
+    };
+
+    // Thiết lập sự kiện click bên ngoài các nút .screen-time
+    document.addEventListener("click", function(event) {
+        if (!event.target.classList.contains("screen-time")) {
+            document.getElementById("screen-next-btn").disabled = true;
+        }
+    });
+
+    // Đặt sự kiện click cho nút đóng thông báo
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('close-alert')) {
+            e.target.parentElement.remove();
+        }
+    });
+
+    // Xử lý sự kiện trực tuyến/ngoại tuyến
+    window.addEventListener('online', function() {
+        showMessage("Kết nối internet đã được khôi phục!", "success");
+        checkAPIConnection();
+    });
+
+    window.addEventListener('offline', function() {
+        showMessage("Bạn đang ngoại tuyến. Một số chức năng có thể không hoạt động.", "warning");
+    });
+
+    // Xử lý lỗi JavaScript
+    window.onerror = function(message, source, lineno, colno, error) {
+        console.error("Lỗi JavaScript:", message, "tại", source, lineno, colno);
+        showMessage("Đã xảy ra lỗi trong ứng dụng. Vui lòng làm mới trang.", "danger");
+        return false;
+    };
+
     // Bắt sự kiện khi tài liệu đã sẵn sàng
     $(document).ready(function() {
         // Kiểm tra kết nối API
@@ -2175,44 +2198,7 @@
             // Ẩn trạng thái loading nếu có
             hideLoading();
         });
-    });
-    
-    // Kiểm tra kết nối với API
-    function checkAPIConnection() {
-        $.ajax({
-            url: '/api/screenings/',
-            method: 'GET',
-            timeout: 5000, // Timeout 5 giây
-            success: function() {
-                console.log("Kết nối API thành công");
-            },
-            error: function(error) {
-                if (error.status === 0) {
-                    showMessage("Cảnh báo: Không thể kết nối đến máy chủ. Một số chức năng có thể không hoạt động.", "warning");
-                }
-            }
-        });
-    }
-    
-    // Thêm hàm xử lý trực tuyến/ngoại tuyến
-    window.addEventListener('online', function() {
-        showMessage("Kết nối internet đã được khôi phục!", "success");
-        checkAPIConnection();
-    });
-    
-    window.addEventListener('offline', function() {
-        showMessage("Bạn đang ngoại tuyến. Một số chức năng có thể không hoạt động.", "warning");
-    });
-    
-    // Xử lý lỗi JavaScript
-    window.onerror = function(message, source, lineno, colno, error) {
-        console.error("Lỗi JavaScript:", message, "tại", source, lineno, colno);
-        showMessage("Đã xảy ra lỗi trong ứng dụng. Vui lòng làm mới trang.", "danger");
-        return false;
-    };
-    
-    // Xử lý sự kiện thanh toán
-    $(document).ready(function() {
+        
         // Xử lý nút thanh toán qua Momo
         $('#momo-payment-button').on('click', function(e) {
             e.preventDefault();
@@ -2226,14 +2212,6 @@
                 showMessage("Không tìm thấy thông tin về ghế đã chọn. Vui lòng thử lại.", "warning");
             }
         });
-        
-        // Xử lý nút thanh toán qua thẻ tín dụng
-        /*
-        $('#card-payment-button').on('click', function(e) {
-            e.preventDefault();
-            showMessage("Chức năng thanh toán qua thẻ tín dụng đang được phát triển.", "info");
-        });
-        */
         
         // Kiểm tra xem người dùng vừa từ trang thanh toán quay lại không
         const paymentResult = getParameterByName('payment_result');

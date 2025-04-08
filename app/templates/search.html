@@ -38,7 +38,7 @@ function searchResult() {
                     let movieHTML = `
                     <div class="item vhny-grid">
                         <div class="box16">
-                            <a href="?movie_id=${movie.id}">
+                            <a href="/details/?movie_id=${movie.id}">
                                 <figure>
                                     <img class="img-fluid" src='${movie.image_ava}' alt="">
                                 </figure>
@@ -65,7 +65,5 @@ function searchResult() {
 $(document).ready(function () {
     searchResult();
 });
-
 </script>
 {% endblock %}
-
